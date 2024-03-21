@@ -1,7 +1,7 @@
 //import model
 const File = require("../Models/Files");
 const cloudinary = require("cloudinary").v2;
-const { options } = require("../routes/FileUpload");
+
 
 exports.localFileUpload = async(req,res) =>{
     try{
@@ -37,63 +37,148 @@ exports.localFileUpload = async(req,res) =>{
     }
 }
 
- function isFileTypeSupported(type,supportedType){
+function isTypeSupported(type,supportedType){
     return supportedType.includes(type);
- }
+}
 
- async function uploadToCloudinary(file,folder){
-    console.log("type of folder: ", typeof(folder));
+async function uploadToCloudinary(file,folder,quality){
     const options = {folder};
+    options.quality = quality;
+    console.log("type of options and folder", typeof(options), typeof(folder));
     options.resource_type = "auto";
-    console.log("options: ", options);
-    console.log("path of temp: ", file.tempFilePath);
+    console.log(options);
     return await cloudinary.uploader.upload(file.tempFilePath,options);
- }
+}
 
-exports.imageUploader = async(req,res) =>{
+exports.imageUploader = async(req,res) => {
     try{
-        const {name, tags, email} = req.body;
-        console.log("name, tags, email" , name,tags,email);
-        //fetch file
+        //fetch data
+        const {name,tags,email} = req.body;
+        //fetch image
         const file = req.files.imageFile;
-        console.log("File is:", file);
+        console.log("Files is: ",file);
 
-        //validation by image type
+        //validation
         const type = file.name.split(".")[1].toLowerCase();
-        console.log("Type is: ",type);
-        const supportedType = ["jpg","png","jpeg"];
+        const supportedType = ["png","jpg","jpeg"];
 
-        if(!isFileTypeSupported(type,supportedType)){
+        if(!isTypeSupported){
             return res.status(400).json({
                 success:false,
-                message:"File type not supported"
-            });
+                message:"This format is not supported"
+            })
         }
 
-        console.log("file type supported");
-        //file type supported then upload to cloudinary
-        const response = await uploadToCloudinary(file,"Project");
+        //supported
+       const response =  await uploadToCloudinary(file,"Project");
+       console.log("Response is: ",response);
+       console.log(response.secure_url);
 
-        console.log("Uploaded to cloudinary: ", response);
-        //save into db
-        const saved = await File.create({
-            name,
-            email,
-            tags,
-            imageUrl: response.secure_url
-        })
+       //upload to db
+       const saved = await File.create({
+          name,
+          email,
+          tags,
+          imageUrl : response.secure_url
+       })
 
-        //success flag
-        return res.status(200).json({
-            success:true,
-            message:"Image uploaded successfully"
-        })
+       res.status(200).json({
+        success:true,
+        message:"File Uploaded successfully"
+       });
     }
     catch(err){
         console.log(err);
-        return res.status(500).json({
+        res.status(500).json({
             success:false,
-            message:"Something wrong in uploading image"
+            message:"Error in Uploading image"
+        })
+    }
+}
+
+exports.videoUploader = async(req,res) => {
+    try{
+        //fetch data
+        const {name,email,tags} = req.body;
+        //fetch file
+        const file = req.files.videoFile;
+
+        //validation
+        const type = file.name.split(".")[1].toLowerCase();
+        const supportedType = ["mov","mp4"];
+
+        if(!isTypeSupported(type,supportedType)){
+            return res.status(400).json({
+                success:false,
+                message:"File type not supported"
+            })
+        }
+
+        //supported
+        const response = await uploadToCloudinary(file,"Project");
+
+        const save = await File.create({
+            name,
+            email,
+            tags,
+            videoUrl: response.secure_url
+        });
+
+        return res.status(200).json({
+            success:true,
+            message:"Video uploaded successfully"
+        })
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            success:false,
+            message:"Error in Uploading video"
+        })
+    }
+}
+
+exports.compressImage = async(req,res) => {
+    try{
+        //fetch data
+        const {name, email,tags} = req.body;
+        //fetch file
+        const file = req.files.imageFile;
+
+        //validation
+        const type = file.name.split(".")[1].toLowerCase();
+        const supportedType = ["png","jpg","jpeg"];
+
+        if(!isTypeSupported){
+            return res.status(400).json({
+                success:false,
+                message:"File Format not supported"
+            })
+        }
+
+        //supported
+        const response = await uploadToCloudinary(file,"Project",80);
+
+        //save to db
+        const save = await File.create({
+            name,
+            email,
+            tags,
+            imageUrl:response.secure_url
+        });
+
+        return res.status(200).json({
+            success:true,
+            message:"Image compressed and uploaded successfully"
+        })
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            success:false,
+            message:"Unable to compress and upload file"
         })
     }
 }
