@@ -121,7 +121,7 @@ exports.videoUploader = async(req,res) => {
             name,
             email,
             tags,
-            videoUrl: response.secure_url
+            imageUrl: response.secure_url
         });
 
         return res.status(200).json({
